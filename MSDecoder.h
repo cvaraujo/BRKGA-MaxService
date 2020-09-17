@@ -35,11 +35,12 @@ Arc(int dest, int del, int jit) : j(dest), delay(del), jitter(jit) {}
 class MSDecoder {
 
 public:
-  typedef adjacency_list< vecS, vecS, undirectedS, no_property, property<edge_weight_t, double>>  BoostGraph;
+  typedef adjacency_list< vecS, vecS, undirectedS, property<vertex_index_t, int>, property<edge_weight_t, double>>  BoostGraph;
   typedef graph_traits<BoostGraph>::edge_descriptor Edge;
   typedef graph_traits<BoostGraph>::vertex_descriptor Vertex;
-  property_map < BoostGraph, edge_weight_t >::type weightmap;
-  
+  property_map<BoostGraph, edge_weight_t>::type weightmap;
+  property_map<BoostGraph, vertex_index_t>::type indexmap;
+
   int n, m, root, paramDelay, paramJitter, paramVariation, paramBandwidth;
   BoostGraph graph;
   vector<vector<Arc>> arcs;

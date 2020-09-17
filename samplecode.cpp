@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 		}
 		end = chrono::steady_clock::now();
 		runtime = chrono::duration_cast<chrono::seconds>(end - start).count();
-	} while (generation < MAX_GENS && runtime < 20);
+	} while (generation < MAX_GENS && runtime < 1800);
 
 	ofstream output;
 	output.open(argv[3]);
