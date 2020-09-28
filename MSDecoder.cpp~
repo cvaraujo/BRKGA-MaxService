@@ -1,0 +1,167 @@
+/*
+* Created by Carlos - 07/09/2020
+*/
+
+#include "MSDecoder.h"
+
+MSDecoder::MSDecoder() {}
+
+void MSDecoder::loadInstance(string instance, string param) {
+  int u, v;
+  double delay, jitter, bandwidth, ldp, paramDelayToken, paramJitterToken, paramVariationToken, paramBandwidthToken;
+  int delayInt, jitterInt, variationInt;
+  string token;
+  ifstream fileBoostGraph, fileParam;
+
+  fileParam.open(param, fstream::in);
+
+  while (!fileParam.eof()) {
+    fileParam >> token;
+    if (token == "Delay") {
+      fileParam >> token;
+      if (token == "variation") {
+	fileParam >> token >> paramVariationToken;
+	paramVariation = int(1e5 * paramVariationToken);
+      } else {
+	fileParam >> paramDelayToken;
+	paramDelay = int(1e5 * paramDelayToken);
+      }
+    }
+    if (token == "Jitter") {
+      fileParam >> token >> paramJitterToken;
+      paramJitter = int(1e6 * paramJitterToken);
+    }
+    if (token == "Bandwidth") {
+      fileParam >> token >> paramBandwidthToken;
+      paramBandwidth = int(paramBandwidthToken);
+    }
+  }
+
+  fileBoostGraph.open(instance, fstream::in);
+
+  while (!fileBoostGraph.eof()) {
+    fileBoostGraph >> token;
+    if (token == "Nodes") {
+      fileBoostGraph >> n; n++;
+      edges = vector<vector<Edge>>(n, vector<Edge>());
+      costs = vector<vector<pair<int, int>>>(n, vector<pair<int, int>>(n));
+      graph = BoostGraph(n);
+    }
+    
+    if (token == "Edges") fileBoostGraph >> m; m += n;
+    if (token == "E") {
+      fileBoostGraph >> u >> v >> delay >> jitter >> bandwidth >> ldp;
+      if (bandwidth >= paramBandwidth) {
+	delayInt = int(1e5 * delay), jitterInt = int(1e6 * jitter);
+	edges[u].push_back(Edge(v, delayInt, jitterInt));
+	costs[u][v] = costs[v][u] = make_pair(delayInt, jitterInt);
+	add_edge(u, v, 1.0, graph);
+      }
+    }
+    if (token == "Root") fileBoostGraph >> root;
+    if (token == "T") fileBoostGraph >> u, terminals.push_back(u);
+  }
+
+  bool isTerminal;
+  for (int i = 1; i < n; ++i) {
+    isTerminal = false;
+    if (i != root) {
+      for (auto t : terminals) {
+	if (i == t) {
+	  isTerminal = true;
+	  break;
+	}
+      }
+      if (!isTerminal) nonTerminals.push_back(i), DuS.push_back(i);
+    }
+  }
+
+  add_edge(root, 0, 0.0, graph);
+  edges[root].push_back(Edge(0, paramDelay, paramJitter));
+  costs[root][0] = costs[0][root] = make_pair(paramDelay, paramJitter);
+
+  for(auto k : DuS) {
+    add_edge(0, k, 0.0, graph);
+    edges[0].push_back(Edge(k, 1, 1));
+    costs[k][0] = costs[0][k] = make_pair(1, 1);  
+  }
+  cout << "Load graph successfully" << endl;
+}
+
+// Revise this function
+double MSDecoder::decode(const std::vector<double>& chromosome) const {
+  bool found;
+  EdgeDescriptor ed;
+  int edNum = 0, pred, count = 0;
+  vector<EdgeDescriptor> spanningTree;
+  vector<short> predecessors = vector<short>(n);
+  predecessors[root] = root;
+  vector<int> delayVec = vector<int>(n), jitterVec = vector<int>(n);
+  vector<bool> notAttended = vector<bool>(n);
+
+  // Update the edges cost
+  for (int i = 0; i < n; i++) {
+    for (auto e : edges[i]) {
+      tie(ed, found) = boost::edge(i, e.j, graph);
+      if (found) boost::put(edge_weight_t(), graph, ed, chromosome[edNum++]);
+    }
+  }
+
+  // Compute the MST
+  kruskal_minimum_spanning_tree(graph, back_inserter(spanningTree));
+
+  for (std::vector<EdgeDescriptor>::iterator ei = spanningTree.begin(); ei != spanningTree.end(); ++ei)
+    predecessors[source(*ei, graph)] = target(*ei, graph);
+
+  int actual, losts = 0;
+  double meanValue = 0.0;
+  for (auto k : terminals) {
+    actual = k;
+    while(pred != root) {
+      delayVec[k] += costs[predecessors[actual]][actual].first;
+      jitterVec[k] += costs[predecessors[actual]][actual].second;
+      actual = predecessors[actual];
+    }
+    if (delayVec[k] > paramDelay || jitterVec[k] > paramJitter)
+      losts++, notAttended[k] = true;
+    else meanValue += delayVec[k];
+  }
+
+  meanValue = meanValue / double(terminals.size() - losts);
+  int lessThanAvg = 0, greaterThanAvg = 0;
+
+  for (auto k : terminals) {
+    if (!notAttended[k]) {
+      if (delayVec[k] <= meanValue) lessThanAvg++;
+      else greaterThanAvg++;
+    }
+  }
+
+  
+  for (auto k : terminals) {
+    if (!notAttended[k]) {
+      for (auto l : terminals) {
+	if (l != k && !notAttended[l]) {
+	  if (delayVec[k] - delayVec[l] > paramVariation) {
+	    if (lessThanAvg < greaterThanAvg) {
+	      if (delayVec[k] < delayVec[l]) {
+		notAttended[k] = true;
+		break;
+	      } else notAttended[l] = true;
+	    } else {
+	      if (delayVec[k] > delayVec[l]) {
+		notAttended[k] = true;
+		break;
+	      } else notAttended[l] = true;
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+  for (auto t : terminals) 
+    if (notAttended[t]) count++;  
+  return count;
+}
+

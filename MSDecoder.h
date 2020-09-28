@@ -61,7 +61,8 @@ public:
   int getM() const;
 
   double decode(const std::vector<double>& chromosome);
-  
+
+  int decodeFinal(const std::vector<double>& chromosome);
 };
 
 #endif
