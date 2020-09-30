@@ -42,6 +42,7 @@ public:
   property_map<BoostGraph, vertex_index_t>::type indexmap;
 
   int n, m, root, paramDelay, paramJitter, paramVariation, paramBandwidth;
+  int incumbent;
   BoostGraph graph;
   vector<vector<Arc>> arcs;
   vector<vector<pair<int, int>>> costs;
@@ -59,6 +60,8 @@ public:
   int getN() const;
 
   int getM() const;
+
+  int getIncumbent() const;
 
   double decode(const std::vector<double>& chromosome);
 
