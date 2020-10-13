@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     algorithm.evolve();	// evolve the population for one generation
 
     //int fitness = decoder.decodeFinal(algorithm.getBestChromosome());
-    cout << algorithm.getBestFitness() << " -> " << decoder.getIncumbent() << endl;
+    //cout << algorithm.getBestFitness() << " -> " << decoder.getIncumbent() << endl;
     //    getchar();
     // cout << algorithm.getBestFitness() << std::endl;
     if((++generation) % X_INTVL == 0) {

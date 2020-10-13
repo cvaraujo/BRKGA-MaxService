@@ -19,9 +19,9 @@
 #include <algorithm>
 #include <fstream>
 
-#ifdef BOOST_MSVC
-#  pragma warning(disable: 4267)
-#endif
+//#ifdef BOOST_MSVC
+//#  pragma warning(disable: 4267)
+//#endif
 
 using namespace boost;
 using namespace std;

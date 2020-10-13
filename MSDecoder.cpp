@@ -108,6 +108,12 @@ void MSDecoder::loadInstance(string instance, string param) {
   cout << "Load graph successfully" << endl;
 }
 
+// Driver function to sort the vector elements 
+// by second element of pairs 
+bool sortbysec(const pair<int,int> &a, const pair<int,int> &b) { 
+    return (a.second > b.second); 
+} 
+
 double MSDecoder::decode(const std::vector<double>& chromosome) {
   bool found;
   Edge ed;
@@ -120,7 +126,7 @@ double MSDecoder::decode(const std::vector<double>& chromosome) {
     jitterPathAux = vector<int>(n), predecessorsAux = vector<int>(n);
   vector<bool> notAttended = vector<bool>(n), notAttendedAux = vector<bool>(n);
   vector<int> changed = vector<int>();
-  double alphaD = 0, alphaJ = 0, alphaV = 0;
+  double alpha;
   
   // Update the arcs cost
   for (int i = 0; i < n; i++) {
@@ -256,14 +262,38 @@ double MSDecoder::decode(const std::vector<double>& chromosome) {
       }
     }
   }
+  /*
+  vector<pair<int, int>> delays = vector<pair<int, int>>();
 
+  for (auto k : terminals)
+    if (delayPaths[k] <= paramDelay)
+      delays.push_back(make_pair(k, delayPaths[k]));
+  sort(delays.begin(), delays.end(), sortbysec);
+
+  for (auto p : delays) {
+    
+  }
+  */
   //for (auto k : terminals)
     //if (notAttended[k]) cout << k << endl;
   //getchar();
+  
   int lessThanAvg = 0, greaterThanAvg = 0;
+  double auxMetric;
+  vector<double> minMetric = vector<double>(3, numeric_limits<int>::max());
+  //Delay = paramDelay, minJitter = paramJitter, minVar = paramVariation;
   for (auto k : terminals) {
-    if (delayPaths[k] > paramDelay) alphaD += double(delayPaths[k] - paramDelay) / paramDelay;
-    if (jitterPaths[k] > paramJitter) alphaJ += double(jitterPaths[k] - paramJitter) / paramJitter;
+    if (delayPaths[k] > paramDelay) {
+      auxMetric = double(delayPaths[k] - paramDelay) / paramDelay;
+      if (auxMetric < minMetric[0])
+	minMetric[0] = auxMetric;
+    }
+    if (jitterPaths[k] > paramJitter) {
+      auxMetric = double(jitterPaths[k] - paramJitter) / paramJitter;
+      if (auxMetric < minMetric[1])
+	minMetric[1] = auxMetric;
+    }
+    
     if (k != selected) {
       if (delayPaths[k] < (delayPaths[selected] - paramVariation) ||
 	  delayPaths[k] > (delayPaths[selected] + paramVariation) ||
@@ -280,8 +310,11 @@ double MSDecoder::decode(const std::vector<double>& chromosome) {
   for (auto k : terminals) {
     for (auto l : terminals)
       if (k != l) 
-	if (abs(delayPaths[k] - delayPaths[l]) > paramVariation) 
-	  alphaV += double(abs(delayPaths[k] - delayPaths[l]) - paramVariation) / paramVariation;
+	if (abs(delayPaths[k] - delayPaths[l]) > paramVariation) {
+	  auxMetric = double(abs(delayPaths[k] - delayPaths[l]) - paramVariation) / paramVariation;
+	  if (auxMetric < minMetric[2])
+	    minMetric[2] = auxMetric;
+	}
 
     if (k != selected && !notAttended[k]) {
       for (auto l : terminals) {
@@ -307,12 +340,22 @@ double MSDecoder::decode(const std::vector<double>& chromosome) {
   count = 0;
   for (auto t : terminals) 
     if (notAttended[t]) count++;
-  
-  if (count < incumbent) incumbent = count;
+
   int s = terminals.size();
-  // cout << count << " <-> " << (double(count) * s) + (alphaD/s) + (alphaJ/s)  + (alphaV/(s * (s-1))) << endl;
-  // getchar();
-  return ((double(count) * 100 * s) + (alphaD) + (alphaJ) + alphaV);
+  alpha = *min_element(minMetric.begin(), minMetric.end());
+  
+  if (count < incumbent){
+    //incumbent = count;
+    //    cout << "Value: " << (count*s) + alpha << ", FO: " << incumbent << endl;
+    /*
+    ofstream file;
+    file.open("solution.sol");
+    for (i = 0; i < n; i++) {
+      file << predecessors[i] << " " << i << endl;
+    }
+    file.close();*/
+  }
+  return ((count * s) + alpha);
 }
 
 int MSDecoder::getM() const {
