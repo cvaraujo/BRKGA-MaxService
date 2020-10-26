@@ -5,16 +5,16 @@
 #include <chrono>
 
 int main(int argc, char* argv[]) {
-  const unsigned p = 100;	// size of population
-  const double pe = 0.20;		// fraction of population to be the elite-set
+  const unsigned p = 500;	// size of population
+  const double pe = 0.15;		// fraction of population to be the elite-set
   const double pm = 0.10;		// fraction of population to be replaced by mutants
   const double rhoe = 0.70;	// probability that offspring inherit an allele from elite parent
   const unsigned K = 3;		// number of independent populations
-  const unsigned MAXT = 2;	// number of threads for parallel decoding
+  const unsigned MAXT = 3;	// number of threads for parallel decoding
 	
   MSDecoder decoder;			// initialize the decoder
   decoder.loadInstance(argv[1], argv[2]); // Load the instance
-	
+  srand(time(NULL));
   const unsigned n = decoder.getM();		// size of chromosomes
   const long unsigned rngSeed = 0;	// seed to the random number generator
   MTRand rng(rngSeed);				// initialize the random number generator
@@ -33,11 +33,8 @@ int main(int argc, char* argv[]) {
   
   do {
     algorithm.evolve();	// evolve the population for one generation
-
-    //int fitness = decoder.decodeFinal(algorithm.getBestChromosome());
-    //cout << algorithm.getBestFitness() << " -> " << decoder.getIncumbent() << endl;
+    cout << algorithm.getBestFitness() << " -> " << decoder.getIncumbent() << endl;
     //    getchar();
-    // cout << algorithm.getBestFitness() << std::endl;
     if((++generation) % X_INTVL == 0) {
       algorithm.exchangeElite(X_NUMBER);	// exchange top individuals
     }
